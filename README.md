@@ -19,7 +19,7 @@ Development
 
 Cloning the project and submodules:
 ```bash
-git clone --recurse-submodules https://github.com/vi7/iot-controller.git
+git clone --recurse-submodules https://github.com/vi7/train-pusher-client.git
 ```
 
 Updating submodules:
@@ -34,8 +34,6 @@ Working on a submodule:
 # update local submodule branch by rebasing:
 git submodule update --remote --rebase
 ```
-
-Activate Python virtualenv with `source venv/bin/activate`
 
 Compile project: `make all`
 

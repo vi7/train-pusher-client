@@ -2,4 +2,4 @@ venv
 .vscode/c_cpp_properties.json
 build
 sdkconfig.old
-
+secrets.h
