@@ -30,12 +30,12 @@ extern "C" {
  *
  * @return ESP_OK on successful connection
  */
-esp_err_t connect(void);
+esp_err_t net_connect(void);
 
 /**
  * Counterpart to connect, de-initializes Wi-Fi or Ethernet
  */
-esp_err_t disconnect(void);
+esp_err_t net_disconnect(void);
 
 /**
  * @brief Configure stdin and stdout to use blocking I/O

@@ -133,7 +133,7 @@ static void stop(void)
     ESP_ERROR_CHECK(esp_wifi_deinit());
 }
 
-esp_err_t connect(void)
+esp_err_t net_connect(void)
 {
     if (s_connect_event_group != NULL) {
         return ESP_ERR_INVALID_STATE;
@@ -150,7 +150,7 @@ esp_err_t connect(void)
     return ESP_OK;
 }
 
-esp_err_t disconnect(void)
+esp_err_t net_disconnect(void)
 {
     if (s_connect_event_group == NULL) {
         return ESP_ERR_INVALID_STATE;

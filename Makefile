@@ -4,5 +4,6 @@
 #
 
 PROJECT_NAME := train-pusher-client
+ESPPORT := $(shell ls -1 /dev/cu.usbserial*)
 
 include $(IDF_PATH)/make/project.mk
