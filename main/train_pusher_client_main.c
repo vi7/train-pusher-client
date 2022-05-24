@@ -14,7 +14,7 @@
 #include "wifi.h"
 
 #define MAX_HTTP_OUTPUT_BUFFER 2048
-static const char *TAG = "HTTP_CLIENT";
+static const char *TAG = "train_pusher_client";
 
 esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
@@ -126,7 +126,9 @@ static void http_test_task(void *pvParameters)
 
 void app_main(void)
 {
-    uart_set_baudrate((uart_port_t)0, 115200);
+    uart_set_baudrate(UART_NUM_0, 9600);
+    ESP_LOGI(TAG, "Device is up. Hey there!");
+
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES) {
       ESP_ERROR_CHECK(nvs_flash_erase());
@@ -141,7 +143,7 @@ void app_main(void)
      * examples/protocols/README.md for more information about this function.
      */
     ESP_ERROR_CHECK(net_connect());
-    ESP_LOGI(TAG, "Connected to AP, begin http example");
+    ESP_LOGI(TAG, "Connected to AP");
 
     xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
 }

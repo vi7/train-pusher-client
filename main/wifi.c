@@ -41,14 +41,14 @@ static char s_connection_passwd[32] = CONFIG_WIFI_PASSWORD;
 static ip6_addr_t s_ipv6_addr;
 #endif
 
-static const char *TAG = "connect";
+static const char *TAG = "net_connect";
 
 static void on_wifi_disconnect(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
     system_event_sta_disconnected_t *event = (system_event_sta_disconnected_t *)event_data;
 
-    ESP_LOGI(TAG, "Wi-Fi disconnected, trying to reconnect...");
+    ESP_LOGI(TAG, "Wi-Fi disconnected with reason %d, trying to reconnect...", event->reason);
     if (event->reason == WIFI_REASON_BASIC_RATE_NOT_SUPPORT) {
         /*Switch to 802.11 bgn mode */
         esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
