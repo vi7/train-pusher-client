@@ -11,6 +11,17 @@ Install ESP toolchain and SDK:
 ./setup.sh
 ```
 
+Activate Python virtualenv and install required packages. Python 3 is required:
+```bash
+virtualenv venv
+source venv/bin/activate
+python -m pip install  -r $IDF_PATH/requirements.txt
+```
+
+To deactivate Python virtualenv run `deactivate`
+
+> **NOTE:** Python virtualenv MUST be activated with `source venv/bin/activate` each time before using `make`
+
 Then start project configuration utility by running `make menuconfig`. In the menu, navigate to `Serial flasher config` > `Default serial port` to configure the serial port, where project will be loaded to. Confirm selection by pressing enter, save configuration by selecting `< Save >` and then exit application by selecting `< Exit >`.
 
 

@@ -43,9 +43,9 @@ install_sdk() {
   if [ ! -d "$RTOS_SDK_INSTALLATION_PREFIX/$RTOS_SDK_NAME" ]
   then
     mkdir -p "$RTOS_SDK_INSTALLATION_PREFIX"
-    git clone --branch release/v$RTOS_SDK_VERSION https://github.com/espressif/$RTOS_SDK_NAME.git "$RTOS_SDK_INSTALLATION_PREFIX/$RTOS_SDK_NAME"
-    python -m ensurepip --upgrade
-    python -m pip install --user -r "$RTOS_SDK_INSTALLATION_PREFIX"/$RTOS_SDK_NAME/requirements.txt
+    git clone --recurse-submodules --branch release/v$RTOS_SDK_VERSION https://github.com/espressif/$RTOS_SDK_NAME.git "$RTOS_SDK_INSTALLATION_PREFIX/$RTOS_SDK_NAME"
+    # Uncomment below to install needed Python packages globally for the current user - NOT RECOMMENDED
+    #python3 -m pip install --user -r "$RTOS_SDK_INSTALLATION_PREFIX"/$RTOS_SDK_NAME/requirements.txt
     printf "\n\e[33;1mAdd \"export IDF_PATH=%s/%s\" to the user profile\e[0m\n\n" "$RTOS_SDK_INSTALLATION_PREFIX" $RTOS_SDK_NAME
   else
     printf "\e[33m[WARN] Skipping ESP8266 RTOS SDK installation. Already installed to %s/%s\e[0m\n" "$RTOS_SDK_INSTALLATION_PREFIX" $RTOS_SDK_NAME

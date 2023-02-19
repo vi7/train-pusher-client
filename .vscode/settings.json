@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "Vagrantfile": "ruby",
+    "uart.h": "c"
+  }
+}
