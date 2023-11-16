@@ -1,6 +1,8 @@
 {
   "files.associations": {
     "Vagrantfile": "ruby",
-    "uart.h": "c"
-  }
+    "uart.h": "c",
+    "freertos.h": "c"
+  },
+  "ansible.python.interpreterPath": "/Users/vi7al/gitrepo/github.com/vi7/train-pusher-client/venv/bin/python"
 }

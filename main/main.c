@@ -3,6 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/uart.h"
+#include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
@@ -13,9 +14,21 @@
 #include "esp_http_client.h"
 #include "wifi.h"
 
+#define GPIO_INPUT_IO_0     4
+#define GPIO_INPUT_IO_1     5
+#define GPIO_INPUT_PIN_SEL  ((1ULL<<GPIO_INPUT_IO_0) | (1ULL<<GPIO_INPUT_IO_1))
+
 #define MAX_HTTP_OUTPUT_BUFFER 2048
+
 static const char *TAG = "train_pusher_client";
 
+static xQueueHandle gpio_evt_queue = NULL;
+
+/*
+ *****************
+ * HTTP FUNCTIONS
+ *****************
+ */
 esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
     static char *output_buffer;  // Buffer to store response of http request from event handler
@@ -124,6 +137,28 @@ static void http_test_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+/*
+ *****************
+ * GPIO FUNCTIONS
+ *****************
+ */
+static void gpio_isr_handler(void *arg)
+{
+    uint32_t gpio_num = (uint32_t) arg;
+    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+}
+
+static void gpio_task_example(void *arg)
+{
+    uint32_t io_num;
+
+    for (;;) {
+        if (xQueueReceive(gpio_evt_queue, &io_num, 10 / portTICK_RATE_MS)) {
+            ESP_LOGI(TAG, "GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
+        }
+    }
+}
+
 void app_main(void)
 {
     uart_set_baudrate(UART_NUM_0, 9600);
@@ -146,4 +181,34 @@ void app_main(void)
     ESP_LOGI(TAG, "Connected to AP");
 
     xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
+
+    /*
+     ************
+     * GPIO CODE
+     ************
+     */
+
+    gpio_config_t io_conf;
+    //interrupt of rising edge
+    io_conf.intr_type = GPIO_INTR_ANYEDGE;
+    //bit mask of the pins, use GPIO4/5 here
+    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+    //set as input mode
+    io_conf.mode = GPIO_MODE_INPUT;
+    //enable pull-up mode
+    io_conf.pull_up_en = 1;
+    gpio_config(&io_conf);
+
+    //create a queue to handle gpio event from isr
+    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+    //start gpio task
+    xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+
+    //install gpio isr service
+    gpio_install_isr_service(0);
+    //hook isr handler for specific gpio pin
+    gpio_isr_handler_add(GPIO_INPUT_IO_0, gpio_isr_handler, (void *) GPIO_INPUT_IO_0);
+    //hook isr handler for specific gpio pin
+    gpio_isr_handler_add(GPIO_INPUT_IO_1, gpio_isr_handler, (void *) GPIO_INPUT_IO_1);
+
 }
