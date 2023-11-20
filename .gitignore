@@ -1,5 +1,8 @@
 venv
+.venv
 .vscode/c_cpp_properties.json
 build
+idedata
 sdkconfig.old
 secrets.h
+secrets.yaml

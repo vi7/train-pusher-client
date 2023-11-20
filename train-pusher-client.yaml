@@ -1,0 +1,164 @@
+substitutions:
+  backend_address: "192.168.1.12"
+  backend_port: "8080"
+  backend_ver: v1
+  train_power: "100"
+
+esphome:
+  name: train-pusher-client
+
+esp8266:
+  board: d1_mini
+
+# Enable logging
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  password: !secret ha_api_password
+
+ota:
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    static_ip: 192.168.1.31
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+    dns1: 192.168.1.1
+    dns2: 192.168.1.4
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Train-Pusher-Client"
+    password: !secret ap_password
+
+captive_portal:
+
+http_request:
+
+binary_sensor:
+  ## Button: Green UP
+  - platform: gpio
+    name: "Forward"
+    pin:
+      number: 12
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_press:
+      then:
+        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/forward/$train_power
+        - logger.log: "Train: Moving forward"
+
+  ## Button: Green DOWN
+  - platform: gpio
+    name: "Backward"
+    pin:
+      number: 5
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_press:
+      then:
+        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/backward/$train_power
+        - logger.log: "Train: Moving backward"
+
+  ## Button: Red
+  - platform: gpio
+    name: "Stop"
+    pin:
+      number: 0
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_press:
+      then:
+        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/stop
+        - logger.log: "Train: stop"
+  # Button: Blue
+  # - platform: gpio
+  #   name: "Brake"
+  #   pin:
+  #     number: 2
+  #     inverted: true
+  #     mode:
+  #       input: true
+  #       pullup: false
+  #   on_press:
+  #     then:
+  #       - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/brake
+  #       - logger.log: "Train: Braking"
+
+  ## Button: Yellow
+  - platform: gpio
+    name: "Play Sound"
+    pin:
+      number: 14
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_click:
+      - min_length: 50ms
+        max_length: 350ms
+        then:
+          # BRAKE = 3,
+          # STATION_DEPARTURE = 5,
+          # WATER_REFILL = 7,
+          # HORN = 9,
+          # STEAM = 10
+          - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/sound/9
+          - logger.log: "Train: play sound HORN"
+      - min_length: 700ms
+        max_length: 3500ms
+        then:
+          - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/sound/3
+          - logger.log: "Train: play sound BRAKE"
+    on_double_click:
+      min_length: 50ms
+      max_length: 300ms
+      then:
+        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/sound/7
+        - logger.log: "Train: play sound WATER_REFILL"
+
+  ## Button: White
+  - platform: gpio
+    name: "LED Control"
+    pin:
+      # number: 4
+      # Temporarily using Blue button because White is broken
+      number: 2
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_click:
+      - min_length: 50ms
+        max_length: 350ms
+        then:
+          # BLACK 0
+          # PINK 1
+          # PURPLE 2
+          # BLUE 3
+          # LIGHT_BLUE 4
+          # CYAN 5
+          # GREEN 6
+          # YELLOW 7
+          # ORANGE 8
+          # RED 9
+          # WHITE 10
+          # NONE 255
+          - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/led/10
+          - logger.log: "Train: LED ON"
+      - min_length: 700ms
+        max_length: 3500ms
+        then:
+          - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/led/0
+          - logger.log: "Train: LED OFF"
