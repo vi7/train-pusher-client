@@ -1,65 +1,42 @@
-ESP8266 Client for the Train Pusher
-===================================
+Client for the Duplo Train Pusher
+=================================
 
-ESP8266 FreeRTOS based client for the [Train Pusher](https://github.com/vi7/train-pusher)
+[ESPHome](https://esphome.io/) client for the [Duplo Train Pusher](https://github.com/vi7/train-pusher) backend
+
+**Table of Contents**
+
+- [Project configuration](#project-configuration)
+- [Firmware upload](#firmware-upload)
+
 
 Project configuration
 ---------------------
 
-Install ESP toolchain and SDK:
+Activate Python virtualenv and install required packages. At least Python 3.10 is required:
 ```bash
-./setup.sh
-```
-
-Activate Python virtualenv and install required packages. Python 3 is required:
-```bash
-virtualenv venv
+python3.10 -m pip install virtualenv
+python3.10 -m virtualenv venv
 source venv/bin/activate
-python -m pip install  -r $IDF_PATH/requirements.txt
+pip install -r requirements.txt
 ```
 
 To deactivate Python virtualenv run `deactivate`
 
-> **NOTE:** Python virtualenv MUST be activated with `source venv/bin/activate` each time before using `make`
+> **NOTE:** Python virtualenv MUST be activated with `source venv/bin/activate` each time before using `esphome`
 
-Then start project configuration utility by running `make menuconfig`. In the menu, navigate to `Serial flasher config` > `Default serial port` to configure the serial port, where project will be loaded to. Confirm selection by pressing enter, save configuration by selecting `< Save >` and then exit application by selecting `< Exit >`.
+Firmware upload
+---------------
 
+> **NOTE:** First time upload should be performed via cable, all subsequent uploads could be performed Over-The-Air (OTA upload)
 
-Development
------------
-
-Cloning the project and submodules:
+To build and upload firmware activate Python virtualenv and install packages from the `requirements.txt` as described in the [Project configuration](#project-configuration) section above and then run ESPHome:
 ```bash
-git clone --recurse-submodules https://github.com/vi7/train-pusher-client.git
+esphome run train-pusher-client.yaml
 ```
 
-Updating submodules:
+In order to check device logs run:
 ```bash
-git submodule update --init --recursive
-# OR if changes already fetched and visible in the status:
-git submodule update --remote
+esphome logs train-pusher-client.yaml
 ```
 
-Working on a submodule:
-```bash
-# update local submodule branch by rebasing:
-git submodule update --remote --rebase
-```
-
-Compile project: `make all`
-
-Compile and flash: `make flash`
-
-Viewing serial output: `make monitor`
-
-Serial monitor hotkeys: Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H
-
-Build just the app: `make app`
-
-Flash just the app: `make app-flash` - will automatically rebuild the app if it needs it
-
-Speed up build with compiling multiple files in parallel: `make -jN app-flash` - where N is the number of parallel make processes to run (generally N should be equal to or one more than the number of CPU cores in your system.)
-
-Erase the entire flash: `make erase_flash`
-
-Make targets could be combined in one run
+More details on ESPHome usage could be found via `esphome -h` command and on [the official website](https://esphome.io/)
