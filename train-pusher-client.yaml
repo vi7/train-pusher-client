@@ -38,7 +38,7 @@ wifi:
 captive_portal:
 
 http_request:
-  timeout: 1s
+  timeout: 2s
 
 binary_sensor:
   ## Button: Green UP
@@ -54,9 +54,8 @@ binary_sensor:
       then:
         - output.turn_off: green_backward
         - output.turn_on: green_forward
-        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/powerup
+        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/fwdpowerup
         - logger.log: "Train: Moving forward"
-        - delay: 1000ms
 
   ## Button: Green DOWN
   - platform: gpio
@@ -71,9 +70,8 @@ binary_sensor:
       then:
         - output.turn_off: green_forward
         - output.turn_on: green_backward
-        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/powerdown
+        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/backpowerup
         - logger.log: "Train: Moving backward"
-        - delay: 1000ms
 
   ## Button: Red
   - platform: gpio
@@ -137,7 +135,7 @@ binary_sensor:
           - delay: 1500ms
           - output.turn_off: yellow
       - min_length: 700ms
-        max_length: 2000ms
+        max_length: 5000ms
         then:
           - output.turn_on: yellow
           - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/sound/7
@@ -180,10 +178,10 @@ binary_sensor:
           # RED 9
           # WHITE 10
           # NONE 255
-          - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/led/10
+          - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/ledchangecolor
           - logger.log: "Train: LED ON"
       - min_length: 700ms
-        max_length: 3500ms
+        max_length: 5000ms
         then:
           - output.turn_off: white
           - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/led/0
