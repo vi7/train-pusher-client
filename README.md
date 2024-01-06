@@ -7,6 +7,8 @@ Client for the Duplo Train Pusher
 
 - [Project configuration](#project-configuration)
 - [Firmware upload](#firmware-upload)
+- [Hardware](#hardware)
+  - [Button to pin mappings](#button-to-pin-mappings)
 
 
 Project configuration
@@ -40,3 +42,16 @@ esphome logs train-pusher-client.yaml
 ```
 
 More details on ESPHome usage could be found via `esphome -h` command and on [the official website](https://esphome.io/)
+
+Hardware
+--------
+### Button to pin mappings
+
+| Button         | TLC5947 pin | D1mini pin   |
+|----------------|:-----------:|:------------:|
+| Green Backward | 22          | 5            |
+| Green Forward  | 23          | 12           |
+| White          | 19          | 4            |
+| Yellow         | 14          | 5            |
+| Blue           | 17          | 2            |
+| Red            | 20          | 0            |

@@ -25,9 +25,11 @@
     "mdns",
     "network",
     "ota",
+    "output",
     "preferences",
     "socket",
     "substitutions",
+    "tlc5947",
     "web_server_base",
     "wifi"
   ],

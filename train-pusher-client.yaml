@@ -2,7 +2,6 @@ substitutions:
   backend_address: "192.168.1.12"
   backend_port: "8080"
   backend_ver: v1
-  train_power: "100"
 
 esphome:
   name: train-pusher-client
@@ -39,6 +38,7 @@ wifi:
 captive_portal:
 
 http_request:
+  timeout: 1s
 
 binary_sensor:
   ## Button: Green UP
@@ -52,8 +52,11 @@ binary_sensor:
         pullup: false
     on_press:
       then:
-        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/forward/$train_power
+        - output.turn_off: green_backward
+        - output.turn_on: green_forward
+        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/powerup
         - logger.log: "Train: Moving forward"
+        - delay: 1000ms
 
   ## Button: Green DOWN
   - platform: gpio
@@ -66,8 +69,11 @@ binary_sensor:
         pullup: false
     on_press:
       then:
-        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/backward/$train_power
+        - output.turn_off: green_forward
+        - output.turn_on: green_backward
+        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/powerdown
         - logger.log: "Train: Moving backward"
+        - delay: 1000ms
 
   ## Button: Red
   - platform: gpio
@@ -80,21 +86,32 @@ binary_sensor:
         pullup: false
     on_press:
       then:
+        - output.turn_off: green_forward
+        - output.turn_off: green_backward
+        - output.turn_on: red
         - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/stop
         - logger.log: "Train: stop"
-  # Button: Blue
-  # - platform: gpio
-  #   name: "Brake"
-  #   pin:
-  #     number: 2
-  #     inverted: true
-  #     mode:
-  #       input: true
-  #       pullup: false
-  #   on_press:
-  #     then:
-  #       - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/brake
-  #       - logger.log: "Train: Braking"
+        - delay: 1500ms
+        - output.turn_off: red
+
+  ## Button: Blue
+  - platform: gpio
+    name: "Brake"
+    pin:
+      number: 2
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_press:
+      then:
+        - output.turn_off: green_forward
+        - output.turn_off: green_backward
+        - output.turn_on: blue
+        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/brake
+        - logger.log: "Train: Braking"
+        - delay: 1500ms
+        - output.turn_off: blue
 
   ## Button: Yellow
   - platform: gpio
@@ -106,35 +123,42 @@ binary_sensor:
         input: true
         pullup: false
     on_click:
-      - min_length: 50ms
+      - min_length: 150ms
         max_length: 350ms
         then:
+          - output.turn_on: yellow
           # BRAKE = 3,
           # STATION_DEPARTURE = 5,
           # WATER_REFILL = 7,
           # HORN = 9,
           # STEAM = 10
-          - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/sound/9
-          - logger.log: "Train: play sound HORN"
+          - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/sound/5
+          - logger.log: "Train: play sound STATION_DEPARTURE"
+          - delay: 1500ms
+          - output.turn_off: yellow
       - min_length: 700ms
-        max_length: 3500ms
+        max_length: 2000ms
         then:
-          - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/sound/3
-          - logger.log: "Train: play sound BRAKE"
-    on_double_click:
-      min_length: 50ms
-      max_length: 300ms
-      then:
-        - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/sound/7
-        - logger.log: "Train: play sound WATER_REFILL"
+          - output.turn_on: yellow
+          - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/sound/7
+          - logger.log: "Train: play sound WATER_REFILL"
+          - delay: 1500ms
+          - output.turn_off: yellow
+    # on_double_click:
+    #   min_length: 50ms
+    #   max_length: 300ms
+    #   then:
+    #     - output.turn_on: yellow
+    #     - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/sound/7
+    #     - logger.log: "Train: play sound WATER_REFILL"
+    #     - delay: 1500ms
+    #     - output.turn_off: yellow
 
   ## Button: White
   - platform: gpio
     name: "LED Control"
     pin:
-      # number: 4
-      # Temporarily using Blue button because White is broken
-      number: 2
+      number: 4
       inverted: true
       mode:
         input: true
@@ -143,6 +167,7 @@ binary_sensor:
       - min_length: 50ms
         max_length: 350ms
         then:
+          - output.turn_on: white
           # BLACK 0
           # PINK 1
           # PURPLE 2
@@ -160,5 +185,33 @@ binary_sensor:
       - min_length: 700ms
         max_length: 3500ms
         then:
+          - output.turn_off: white
           - http_request.get: http://$backend_address:$backend_port/api/$backend_ver/led/0
           - logger.log: "Train: LED OFF"
+
+## LED controller
+tlc5947:
+  data_pin: 15
+  clock_pin: 16
+  lat_pin: 13
+
+## Button LED's
+output:
+  - platform: tlc5947
+    id: green_backward
+    channel: 22
+  - platform: tlc5947
+    id: green_forward
+    channel: 23
+  - platform: tlc5947
+    id: white
+    channel: 19
+  - platform: tlc5947
+    id: yellow
+    channel: 18
+  - platform: tlc5947
+    id: blue
+    channel: 17
+  - platform: tlc5947
+    id: red
+    channel: 20
