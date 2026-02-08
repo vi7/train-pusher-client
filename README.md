@@ -14,10 +14,10 @@ Client for the Duplo Train Pusher
 Project configuration
 ---------------------
 
-Activate Python virtualenv and install required packages. At least Python 3.10 is required:
+Activate Python virtualenv and install required packages. Check ESPHome docs for Python requirements:
 ```bash
-python3.10 -m pip install virtualenv
-python3.10 -m virtualenv venv
+python3 -m pip install virtualenv
+python3 -m virtualenv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
