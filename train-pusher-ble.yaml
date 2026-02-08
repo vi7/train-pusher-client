@@ -1,0 +1,309 @@
+substitutions:
+  # BLE MAC address of the Lego Duplo train -- MUST be changed before use!
+  # Discover it using nRF Connect app or ESP32 BLE scan
+  train_mac_address: "00:00:00:00:00:00"
+  # Motor speed (0-100 range, will be mapped to protocol values)
+  default_speed: "50"
+  # Button GPIO pins (remapped for ESP32 compatibility)
+  pin_forward: "12"
+  pin_backward: "5"
+  pin_stop: "25"       # ESP8266 used GPIO 0 (strapping pin on ESP32)
+  pin_brake: "26"      # ESP8266 used GPIO 2 (onboard LED on ESP32)
+  pin_sound: "14"
+  pin_led_control: "4"
+  # TLC5947 LED driver pins
+  pin_tlc_data: "15"
+  pin_tlc_clock: "16"
+  pin_tlc_latch: "13"
+
+esphome:
+  name: train-pusher-ble
+
+esp32:
+  board: wemos_d1_mini32
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    static_ip: 192.168.1.31
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+    dns1: 192.168.1.1
+    dns2: 192.168.1.4
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Train-Pusher-BLE"
+    password: !secret ap_password
+
+captive_portal:
+
+esp32_ble_tracker:
+
+ble_client:
+  - mac_address: ${train_mac_address}
+    id: train
+    on_connect:
+      then:
+        - logger.log: "BLE: Connected to train"
+        # Flash all LEDs briefly as visual confirmation
+        - output.turn_on: green_forward
+        - output.turn_on: green_backward
+        - output.turn_on: red
+        - output.turn_on: blue
+        - output.turn_on: yellow
+        - output.turn_on: white
+        - delay: 500ms
+        - output.turn_off: green_forward
+        - output.turn_off: green_backward
+        - output.turn_off: red
+        - output.turn_off: blue
+        - output.turn_off: yellow
+        - output.turn_off: white
+    on_disconnect:
+      then:
+        - logger.log: "BLE: Disconnected from train"
+        - output.turn_off: green_forward
+        - output.turn_off: green_backward
+        - output.turn_off: red
+        - output.turn_off: blue
+        - output.turn_off: yellow
+        - output.turn_off: white
+
+globals:
+  - id: train_led_color
+    type: int
+    initial_value: "0"
+
+script:
+  - id: motor_command
+    parameters:
+      speed: int
+    then:
+      - ble_client.ble_write:
+          id: train
+          service_uuid: "00001623-1212-efde-1623-785feabcd123"
+          characteristic_uuid: "00001624-1212-efde-1623-785feabcd123"
+          value: !lambda |-
+            return {0x08, 0x00, 0x81, 0x00, 0x01, 0x51, 0x00, (uint8_t)speed};
+
+  - id: sound_command
+    parameters:
+      sound_id: int
+    then:
+      - ble_client.ble_write:
+          id: train
+          service_uuid: "00001623-1212-efde-1623-785feabcd123"
+          characteristic_uuid: "00001624-1212-efde-1623-785feabcd123"
+          value: !lambda |-
+            return {0x08, 0x00, 0x81, 0x01, 0x11, 0x51, 0x01, (uint8_t)sound_id};
+
+  - id: led_command
+    parameters:
+      color: int
+    then:
+      - ble_client.ble_write:
+          id: train
+          service_uuid: "00001623-1212-efde-1623-785feabcd123"
+          characteristic_uuid: "00001624-1212-efde-1623-785feabcd123"
+          value: !lambda |-
+            return {0x08, 0x00, 0x81, 0x11, 0x11, 0x51, 0x00, (uint8_t)color};
+
+binary_sensor:
+  ## Button: Green UP
+  - platform: gpio
+    name: "Forward"
+    pin:
+      number: ${pin_forward}
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_press:
+      then:
+        - output.turn_off: green_backward
+        - output.turn_on: green_forward
+        - script.execute:
+            id: motor_command
+            speed: ${default_speed}
+        - logger.log: "Train: Moving forward"
+
+  ## Button: Green DOWN
+  - platform: gpio
+    name: "Backward"
+    pin:
+      number: ${pin_backward}
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_press:
+      then:
+        - output.turn_off: green_forward
+        - output.turn_on: green_backward
+        - lambda: |-
+            int speed = -${default_speed};
+            id(motor_command)->execute(speed);
+        - logger.log: "Train: Moving backward"
+
+  ## Button: Red
+  - platform: gpio
+    name: "Stop"
+    pin:
+      number: ${pin_stop}
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_press:
+      then:
+        - output.turn_off: green_forward
+        - output.turn_off: green_backward
+        - output.turn_on: red
+        - script.execute:
+            id: motor_command
+            speed: 0
+        - logger.log: "Train: stop"
+        - delay: 1500ms
+        - output.turn_off: red
+
+  ## Button: Blue
+  - platform: gpio
+    name: "Brake"
+    pin:
+      number: ${pin_brake}
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_press:
+      then:
+        - output.turn_off: green_forward
+        - output.turn_off: green_backward
+        - output.turn_on: blue
+        - script.execute:
+            id: motor_command
+            speed: 127
+        - logger.log: "Train: Braking"
+        - delay: 1500ms
+        - output.turn_off: blue
+
+  ## Button: Yellow
+  - platform: gpio
+    name: "Play Sound"
+    pin:
+      number: ${pin_sound}
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_click:
+      - min_length: 150ms
+        max_length: 350ms
+        then:
+          - output.turn_on: yellow
+          # BRAKE = 3,
+          # STATION_DEPARTURE = 5,
+          # WATER_REFILL = 7,
+          # HORN = 9,
+          # STEAM = 10
+          - script.execute:
+              id: sound_command
+              sound_id: 5
+          - logger.log: "Train: play sound STATION_DEPARTURE"
+          - delay: 1500ms
+          - output.turn_off: yellow
+      - min_length: 700ms
+        max_length: 5000ms
+        then:
+          - output.turn_on: yellow
+          - script.execute:
+              id: sound_command
+              sound_id: 7
+          - logger.log: "Train: play sound WATER_REFILL"
+          - delay: 1500ms
+          - output.turn_off: yellow
+
+  ## Button: White
+  - platform: gpio
+    name: "LED Control"
+    pin:
+      number: ${pin_led_control}
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    on_click:
+      - min_length: 50ms
+        max_length: 350ms
+        then:
+          - output.turn_on: white
+          # BLACK 0
+          # PINK 1
+          # PURPLE 2
+          # BLUE 3
+          # LIGHT_BLUE 4
+          # CYAN 5
+          # GREEN 6
+          # YELLOW 7
+          # ORANGE 8
+          # RED 9
+          # WHITE 10
+          # NONE 255
+          - lambda: |-
+              int color = id(train_led_color) + 1;
+              if (color > 10) color = 1;
+              id(train_led_color) = color;
+              id(led_command)->execute(color);
+          - logger.log: "Train: LED ON"
+      - min_length: 700ms
+        max_length: 5000ms
+        then:
+          - output.turn_off: white
+          - lambda: |-
+              id(train_led_color) = 0;
+              id(led_command)->execute(0);
+          - logger.log: "Train: LED OFF"
+
+## LED controller
+tlc5947:
+  data_pin: ${pin_tlc_data}
+  clock_pin: ${pin_tlc_clock}
+  lat_pin: ${pin_tlc_latch}
+
+## Button LED's
+output:
+  - platform: tlc5947
+    id: green_backward
+    channel: 22
+  - platform: tlc5947
+    id: green_forward
+    channel: 23
+  - platform: tlc5947
+    id: white
+    channel: 19
+  - platform: tlc5947
+    id: yellow
+    channel: 18
+  - platform: tlc5947
+    id: blue
+    channel: 17
+  - platform: tlc5947
+    id: red
+    channel: 20

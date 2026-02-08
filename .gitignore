@@ -6,3 +6,4 @@ idedata
 sdkconfig.old
 secrets.h
 secrets.yaml
+.esphome/.espressif

@@ -22,7 +22,7 @@ ESPHome-based physical control panel for controlling a Lego Duplo train via Blue
    - After first flash, OTA (Over-The-Air) updates can be used
    - Keep USB cable accessible in case OTA fails
 
-4. **Test backend connectivity before deploying firmware**
+4. **Test backend connectivity before deploying firmware** (HTTP variant only)
    - Verify train-pusher backend is running on configured IP:port
    - Check network connectivity: `curl http://192.168.1.12:8080/api/v1/`
    - Device will attempt to call backend on every button press
@@ -30,21 +30,37 @@ ESPHome-based physical control panel for controlling a Lego Duplo train via Blue
 5. **Verify static IP configuration doesn't conflict**
    - Default device IP: 192.168.1.31
    - Ensure no other device uses this IP on your network
-   - Update in `train-pusher-client.yaml` if conflict exists
+   - Update in the respective YAML config if conflict exists
+
+6. **Set the train's BLE MAC address** (BLE variant only)
+   - The `train_mac_address` substitution in `train-pusher-ble.yaml` must be set before flashing
+   - Discover the MAC using nRF Connect app or ESP32 BLE scan logs
 
 ## Project Overview
 
-**Hardware**: ESP8266 (D1 Mini) + TLC5947 LED driver + physical buttons
-**Firmware**: ESPHome
-**Backend**: Node.js HTTP server (train-pusher)
-**Communication**: HTTP REST API
+Two configuration variants exist:
+
+| Variant | Config file | MCU | Communication |
+|---------|-------------|-----|---------------|
+| **HTTP** | `train-pusher-client.yaml` | ESP8266 (D1 Mini) | HTTP to Node.js backend |
+| **BLE** | `train-pusher-ble.yaml` | ESP32 (D1 Mini 32) | Direct BLE to train |
+
+**Shared hardware**: TLC5947 LED driver + 6 physical buttons
 
 ## Architecture
 
+### HTTP variant (original)
 ```
 Physical Buttons → ESP8266 → HTTP API → Node.js Backend → BLE → Lego Duplo Train
                         ↓
-                   LED Feedback
+                   LED Feedback (TLC5947)
+```
+
+### BLE variant (direct)
+```
+Physical Buttons → ESP32 → BLE → Lego Duplo Train
+                      ↓
+                 LED Feedback (TLC5947)
 ```
 
 ## Hardware Setup
@@ -66,14 +82,39 @@ Physical Buttons → ESP8266 → HTTP API → Node.js Backend → BLE → Lego D
 | Yellow | 14 | 18 | Play sounds (short/long press) | `/api/v1/sound/{id}` |
 | White | 4 | 19 | LED control (short=cycle, long=off) | `/api/v1/ledchangecolor` or `/api/v1/led/0` |
 
+### ESP32 GPIO Pin Changes (BLE variant)
+
+GPIO 0 and GPIO 2 have special functions on ESP32 and are remapped:
+
+| Button | ESP8266 GPIO | ESP32 GPIO | Reason |
+|--------|:------------:|:----------:|--------|
+| Stop   | 0            | 25         | GPIO 0 is strapping pin (boot mode) |
+| Brake  | 2            | 26         | GPIO 2 drives onboard LED |
+
+All other button/TLC5947 pins remain the same across both variants.
+
 ### TLC5947 LED Driver Pins
 - **Data Pin**: GPIO 15
 - **Clock Pin**: GPIO 16
 - **Latch Pin**: GPIO 13
 
+## BLE Protocol Reference (Lego Duplo Train)
+
+**BLE UUIDs**:
+- Service: `00001623-1212-efde-1623-785feabcd123`
+- Characteristic: `00001624-1212-efde-1623-785feabcd123`
+
+**Command formats** (all writes are 8-byte arrays):
+
+| Command | Bytes | Notes |
+|---------|-------|-------|
+| Motor | `[0x08, 0x00, 0x81, 0x00, 0x01, 0x51, 0x00, speed]` | speed: 0=stop, 1-100=fwd, 156-255=rev(-100 to -1), 127=brake |
+| Sound | `[0x08, 0x00, 0x81, 0x01, 0x11, 0x51, 0x01, sound_id]` | 3=brake, 5=departure, 7=water, 9=horn, 10=steam |
+| LED | `[0x08, 0x00, 0x81, 0x11, 0x11, 0x51, 0x00, color]` | 0=off, 1=pink, 2=purple, ..., 10=white, 255=none |
+
 ## Configuration
 
-### Backend Connection
+### Backend Connection (HTTP variant only)
 
 Edit `train-pusher-client.yaml` substitutions section:
 
@@ -128,18 +169,20 @@ pip install -r requirements.txt
 
 ### Building and Flashing
 
+Replace `<config>` with `train-pusher-client.yaml` (HTTP) or `train-pusher-ble.yaml` (BLE):
+
 ```bash
 # Build and upload firmware
-esphome run train-pusher-client.yaml
+esphome run <config>
 
 # View logs
-esphome logs train-pusher-client.yaml
+esphome logs <config>
 
 # Validate configuration
-esphome config train-pusher-client.yaml
+esphome config <config>
 
 # Compile only (no upload)
-esphome compile train-pusher-client.yaml
+esphome compile <config>
 ```
 
 **First Flash**: Must be done via USB cable. All subsequent updates can be done Over-The-Air (OTA).
@@ -249,11 +292,14 @@ pip install -r requirements.txt --upgrade
 # Activate environment (REQUIRED - see Safety Notes above!)
 source venv/bin/activate
 
-# Full rebuild and flash
+# Full rebuild and flash (HTTP variant)
 esphome run train-pusher-client.yaml
 
+# Full rebuild and flash (BLE variant)
+esphome run train-pusher-ble.yaml
+
 # Monitor logs
-esphome logs train-pusher-client.yaml
+esphome logs train-pusher-client.yaml   # or train-pusher-ble.yaml
 
 # Deactivate environment
 deactivate
