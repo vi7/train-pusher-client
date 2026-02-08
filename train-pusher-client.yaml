@@ -16,10 +16,12 @@ logger:
 
 # Enable Home Assistant API
 api:
-  password: !secret ha_api_password
+  encryption:
+    key: !secret api_encryption_key
 
 ota:
-  password: !secret ota_password
+  - platform: esphome
+    password: !secret ota_password
 
 wifi:
   ssid: !secret wifi_ssid
@@ -40,6 +42,7 @@ captive_portal:
 
 http_request:
   timeout: 2s
+  verify_ssl: false
 
 binary_sensor:
   ## Button: Green UP
