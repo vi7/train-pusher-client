@@ -3,13 +3,13 @@
   "name": "train-pusher-client",
   "friendly_name": null,
   "comment": null,
-  "esphome_version": "2023.11.1",
+  "esphome_version": "2026.3.0",
   "src_version": 1,
-  "address": "192.168.1.31",
+  "address": "train-pusher-client.local",
   "web_port": null,
   "esp_platform": "ESP8266",
-  "build_path": ".esphome/build/train-pusher-client",
-  "firmware_bin_path": ".esphome/build/train-pusher-client/.pioenvs/train-pusher-client/firmware.bin",
+  "build_path": "/Users/vi7al/gitrepo/github.com/vi7/train-pusher-client/.esphome/build/train-pusher-client",
+  "firmware_bin_path": "/Users/vi7al/gitrepo/github.com/vi7/train-pusher-client/.esphome/build/train-pusher-client/.pioenvs/train-pusher-client/firmware.bin",
   "loaded_integrations": [
     "api",
     "async_tcp",
@@ -27,11 +27,23 @@
     "ota",
     "output",
     "preferences",
+    "safe_mode",
+    "sha256",
     "socket",
     "substitutions",
     "tlc5947",
+    "watchdog",
+    "web_server",
     "web_server_base",
     "wifi"
   ],
-  "no_mdns": false
+  "loaded_platforms": [
+    "binary_sensor/gpio",
+    "ota/esphome",
+    "ota/web_server",
+    "output/tlc5947"
+  ],
+  "no_mdns": false,
+  "framework": "arduino",
+  "core_platform": "esp8266"
 }
