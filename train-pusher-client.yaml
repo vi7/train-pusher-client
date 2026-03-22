@@ -1,6 +1,7 @@
 substitutions:
   # vi-macbook address or other computer which runs train-pusher nodejs backend
-  backend_address: "192.168.1.12"
+  # backend_address: "192.168.7.224"
+  backend_address: "10.0.1.113"
   backend_port: "8080"
   backend_ver: v1
 
