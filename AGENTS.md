@@ -1,0 +1,116 @@
+# Repository guide for AI agents
+
+## Project and source of truth
+
+This repository contains ESPHome firmware configurations for a physical Lego
+Duplo train controller with six buttons and a TLC5947 LED driver. There is no
+application server here; the HTTP backend lives in the separate `vi7/train-pusher`
+repository.
+
+| File | Purpose |
+| --- | --- |
+| `train-pusher-client.yaml` | ESP8266 D1 Mini; sends HTTP GET requests to the backend |
+| `train-pusher-ble.yaml` | ESP32 D1 Mini 32 with ESP-IDF; writes BLE commands directly to the train |
+| `requirements.txt` | Python dependencies; currently contains unpinned `esphome` |
+| `secrets.yaml.example` | Template for local credentials |
+| `README.md` | User setup, hardware and flashing instructions |
+| `CLAUDE.md` | Additional agent documentation; some details are outdated |
+
+Treat the actual YAML as authoritative for current behavior. In particular:
+
+- HTTP currently uses DHCP (`manual_ip` is commented out) and an empty `api:`
+  block. BLE has a static IP and requires `api_encryption_key`.
+- `secrets.yaml.example` does not yet include the BLE API encryption key. Supply
+  that key locally before validating or deploying BLE firmware.
+- The README hardware table has an outdated yellow-button mapping; both YAML
+  files use GPIO 14 and TLC5947 channel 18.
+- BLE uses a placeholder `train_mac_address`; configure a real address before
+  deploying. Read the current HTTP backend address from substitutions rather
+  than copying addresses from older documentation.
+
+## Working locally
+
+Use a project virtual environment for dependency installation and ESPHome:
+
+```bash
+python3 -m venv venv  # only if a virtual environment does not already exist
+source venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+If `secrets.yaml` is absent, copy `secrets.yaml.example` to it and configure local
+values. Never overwrite existing credentials. Never commit, print, or include
+real secrets in documentation, logs, or review descriptions.
+
+There is no automated test suite or CI configuration in the tracked repository.
+For firmware changes, validate the affected configuration (both if shared
+behavior changes):
+
+```bash
+source venv/bin/activate
+esphome config train-pusher-client.yaml
+esphome config train-pusher-ble.yaml
+```
+
+Configuration output can contain resolved local values; keep it private or
+redact it before sharing. For changes to BLE payloads, lambdas, components or
+framework settings, also compile the affected firmware:
+
+```bash
+source venv/bin/activate
+esphome compile train-pusher-client.yaml
+esphome compile train-pusher-ble.yaml
+```
+
+Compilation may download toolchains and dependencies. Report the installed
+ESPHome version and any validation limitations; do not silently migrate firmware
+to a newer ESPHome schema to make an unrelated change pass. Documentation-only
+changes need a content review and `git diff --check`, not a firmware build.
+
+## Hardware and behavior to preserve
+
+| Button | HTTP GPIO | BLE GPIO | TLC5947 channel |
+| --- | --- | --- | --- |
+| Forward | 12 | 12 | 23 |
+| Backward | 5 | 5 | 22 |
+| Stop (red) | 0 | 25 | 20 |
+| Brake (blue) | 2 | 26 | 17 |
+| Sound (yellow) | 14 | 14 | 18 |
+| Train LED control (white) | 4 | 4 | 19 |
+
+The TLC5947 uses data GPIO 15, clock GPIO 16, and latch GPIO 13 in both variants.
+Buttons are active low, with internal pullups disabled. Preserve pin assignments
+unless a requested hardware change requires them.
+
+- Forward and backward turn off the opposite direction indicator. HTTP requests
+  acceleration endpoints; BLE sends a fixed signed `default_speed` (currently 50).
+- Stop sends zero motor power; brake sends BLE value 127 or the HTTP brake
+  endpoint. Both clear direction indicators and light their button for 1500 ms.
+- Sound: a 150–350 ms press plays departure (5); a 700–5000 ms press plays water
+  refill (7).
+- White: a 50–350 ms press cycles train LED colors; a 700–5000 ms press turns the
+  train LED off. BLE tracks its color locally, cycling 1 through 10.
+- BLE clears all button LEDs on disconnect and briefly flashes them on connect.
+
+Keep BLE service/characteristic UUIDs, eight-byte payload layouts, motor signed
+byte conversion, and stop/brake distinction intact unless explicitly changing
+the protocol. Do not assume HTTP acceleration and BLE fixed-speed behavior are
+interchangeable.
+
+## Scope and verification
+
+Keep changes focused on the requested variant. Preserve YAML indentation and
+existing ESPHome IDs, substitutions, and inline C++ style. Update relevant docs
+when changing wiring, setup, or user-visible behavior.
+
+Do not flash firmware or send commands to the backend or train without an
+explicit deployment or hardware-testing request. `esphome run` builds and
+uploads firmware; use `config` and `compile` for local checks. Initial flashing
+requires USB; later uploads may use OTA. Validate network settings and the BLE
+address before an authorized deployment.
+
+Do not commit local `secrets.yaml`, virtual environments, toolchains, generated
+firmware, or incidental editor/build changes. Some `.esphome/storage/` metadata
+is already tracked; avoid changing it as a side effect. Before committing, review
+the staged diff and run `git diff --check`. In the review description, state
+what changed, which checks ran, and whether hardware testing was performed.
