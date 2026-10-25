@@ -6,11 +6,12 @@ ESPHome-based physical control panel for controlling a Lego Duplo train via Blue
 
 **READ THIS BEFORE MAKING ANY CHANGES**
 
-1. **ALWAYS activate Python virtualenv** before running ANY ESPHome commands:
+1. **Use uv for all ESPHome commands**; it manages `.venv/` automatically:
    ```bash
-   source venv/bin/activate
+   uv run esphome version
    ```
-   Running `pip install` or ESPHome commands without activating virtualenv can corrupt your system Python installation.
+   No virtualenv activation is required. Do not install dependencies into system Python.
+   See `AGENTS.md` for the current repository workflow.
 
 2. **NEVER commit `secrets.yaml`** to version control
    - Contains WiFi passwords, API credentials, and OTA passwords
@@ -154,18 +155,14 @@ Adjust these values to match your network setup.
 ### Prerequisites
 
 ```bash
-# Create Python virtual environment
-python3 -m pip install virtualenv
-python3 -m virtualenv venv
+# Install uv once (macOS with Homebrew; see README for other platforms)
+brew install uv
 
-# Activate virtualenv (REQUIRED for all ESPHome commands)
-source venv/bin/activate
-
-# Install ESPHome
-pip install -r requirements.txt
+# Install the locked project dependencies
+uv sync --locked
 ```
 
-**Important**: Always activate the virtualenv with `source venv/bin/activate` before using ESPHome commands.
+**Important**: Run commands from the repository root with `uv run esphome`; uv syncs `.venv/` automatically without activation.
 
 ### Building and Flashing
 
@@ -173,16 +170,16 @@ Replace `<config>` with `train-pusher-client.yaml` (HTTP) or `train-pusher-ble.y
 
 ```bash
 # Build and upload firmware
-esphome run <config>
+uv run esphome run <config>
 
 # View logs
-esphome logs <config>
+uv run esphome logs <config>
 
 # Validate configuration
-esphome config <config>
+uv run esphome config <config>
 
 # Compile only (no upload)
-esphome compile <config>
+uv run esphome compile <config>
 ```
 
 **First Flash**: Must be done via USB cable. All subsequent updates can be done Over-The-Air (OTA).
@@ -192,7 +189,7 @@ esphome compile <config>
 After initial USB flash, you can update wirelessly:
 
 ```bash
-esphome run train-pusher-client.yaml
+uv run esphome run train-pusher-client.yaml
 # Select OTA option when prompted
 ```
 
@@ -254,7 +251,7 @@ The device is compatible with Home Assistant via the ESPHome API:
 ### Buttons Not Working
 - Check pin assignments in `train-pusher-client.yaml`
 - Verify GPIO connections to D1 Mini
-- Review logs with `esphome logs train-pusher-client.yaml`
+- Review logs with `uv run esphome logs train-pusher-client.yaml`
 - Buttons are configured as inverted (active low) without internal pullups
 
 ### LEDs Not Lighting
@@ -270,37 +267,37 @@ The device is compatible with Home Assistant via the ESPHome API:
 ## Development Notes
 
 ### ESPHome Version
-The project uses ESPHome as specified in `requirements.txt`. Update by modifying the requirements file and reinstalling:
+ESPHome is pinned in `pyproject.toml`, with resolved dependencies in `uv.lock`. Upgrade intentionally, then validate both firmware configurations and commit both files:
 
 ```bash
-pip install -r requirements.txt --upgrade
+uv add 'esphome==<version>'
 ```
 
 ### Build Artifacts
 - `.esphome/` - Build cache and compiled binaries (git-ignored)
-- `venv/` - Python virtual environment (git-ignored)
+- `.venv/` - uv-managed Python virtual environment (git-ignored)
+- `venv/` - Legacy virtual environment (git-ignored, unused by uv)
 
 ### Making Changes
 1. Edit `train-pusher-client.yaml` for configuration changes
-2. Validate: `esphome config train-pusher-client.yaml`
-3. Upload: `esphome run train-pusher-client.yaml` (OTA or USB)
-4. Monitor: `esphome logs train-pusher-client.yaml`
+2. Validate: `uv run esphome config train-pusher-client.yaml`
+3. Upload: `uv run esphome run train-pusher-client.yaml` (OTA or USB)
+4. Monitor: `uv run esphome logs train-pusher-client.yaml`
 
 ## Quick Reference
 
 ```bash
-# Activate environment (REQUIRED - see Safety Notes above!)
-source venv/bin/activate
+# Optional initial sync; uv run also syncs automatically
+uv sync --locked
 
 # Full rebuild and flash (HTTP variant)
-esphome run train-pusher-client.yaml
+uv run esphome run train-pusher-client.yaml
 
 # Full rebuild and flash (BLE variant)
-esphome run train-pusher-ble.yaml
+uv run esphome run train-pusher-ble.yaml
 
 # Monitor logs
-esphome logs train-pusher-client.yaml   # or train-pusher-ble.yaml
+uv run esphome logs train-pusher-client.yaml   # or train-pusher-ble.yaml
 
-# Deactivate environment
-deactivate
+# No activation or deactivation is needed
 ```

@@ -22,34 +22,61 @@ Two variants are available:
 Project configuration
 ---------------------
 
-Activate Python virtualenv and install required packages. Check ESPHome docs for Python requirements:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) once. On macOS with Homebrew:
+
 ```bash
-python3 -m pip install virtualenv
-python3 -m virtualenv venv
-source venv/bin/activate
-pip install -r requirements.txt
+brew install uv
 ```
 
-To deactivate Python virtualenv run `deactivate`
+On Linux, use one of the installation methods in the linked uv documentation.
+From the repository root, install the locked dependencies:
 
-> **NOTE:** Python virtualenv MUST be activated with `source venv/bin/activate` each time before using `esphome`
+```bash
+uv sync --locked
+```
+
+uv creates `.venv/` and uses Python 3.11 from `.python-version`, downloading Python
+if needed. Run all ESPHome commands with `uv run`; no environment activation or
+`source` command is needed. `uv run` also syncs dependencies automatically, so the
+initial `uv sync` is optional. Existing `venv/` directories are no longer used;
+if you have one active, run `deactivate` once before switching to this workflow.
+
+If `secrets.yaml` is absent, copy `secrets.yaml.example` to it and configure your
+credentials. The BLE variant also needs an `api_encryption_key` entry, which is
+currently missing from the example. Never commit `secrets.yaml`.
+
+Dependencies are declared in `pyproject.toml`; `uv.lock` records the exact resolved
+versions. ESPHome is pinned to `2026.3.0`, matching the environment used before
+this migration. The uv configuration also retains `cbor2 5.8.0` from that
+environment to avoid the Rust build required by `cbor2 6.1.5` on Intel macOS.
+To intentionally upgrade ESPHome, run `uv add 'esphome==<version>'`,
+validate both firmware configurations, and commit both dependency files.
+
+Validate configuration or compile without uploading firmware:
+
+```bash
+uv run esphome config train-pusher-client.yaml
+uv run esphome config train-pusher-ble.yaml
+uv run esphome compile train-pusher-client.yaml
+uv run esphome compile train-pusher-ble.yaml
+```
 
 Firmware upload
 ---------------
 
 > **NOTE:** First time upload should be performed via cable, all subsequent uploads could be performed Over-The-Air (OTA upload)
 
-To build and upload firmware activate Python virtualenv and install packages from the `requirements.txt` as described in the [Project configuration](#project-configuration) section above and then run ESPHome:
+To build and upload firmware, complete the [Project configuration](#project-configuration) above, then run:
 ```bash
-esphome run train-pusher-client.yaml
+uv run esphome run train-pusher-client.yaml
 ```
 
 In order to check device logs run:
 ```bash
-esphome logs train-pusher-client.yaml
+uv run esphome logs train-pusher-client.yaml
 ```
 
-More details on ESPHome usage could be found via `esphome -h` command and on [the official website](https://esphome.io/)
+More details on ESPHome usage could be found via `uv run esphome -h` command and on [the official website](https://esphome.io/)
 
 BLE variant
 -----------
@@ -89,8 +116,7 @@ substitutions:
 ### Build and flash
 
 ```bash
-source venv/bin/activate
-esphome run train-pusher-ble.yaml
+uv run esphome run train-pusher-ble.yaml
 ```
 
 Hardware
