@@ -16,7 +16,6 @@ repository.
 | `.python-version` | Default Python version for uv (3.11) |
 | `secrets.yaml.example` | Template for local credentials |
 | `README.md` | User setup, hardware and flashing instructions |
-| `CLAUDE.md` | Additional agent documentation; some details are outdated |
 
 Treat the actual YAML as authoritative for current behavior. In particular:
 
@@ -102,6 +101,50 @@ Keep BLE service/characteristic UUIDs, eight-byte payload layouts, motor signed
 byte conversion, and stop/brake distinction intact unless explicitly changing
 the protocol. Do not assume HTTP acceleration and BLE fixed-speed behavior are
 interchangeable.
+
+## Communication reference
+
+HTTP commands are GET requests to
+`http://${backend_address}:${backend_port}/api/${backend_ver}/<endpoint>`, using
+the substitutions in `train-pusher-client.yaml`. The request timeout is 2 seconds.
+
+| Action | Endpoint suffix |
+| --- | --- |
+| Accelerate forward/backward | `fwdpowerup` / `backpowerup` |
+| Stop / brake | `stop` / `brake` |
+| Departure / water refill sound | `sound/5` / `sound/7` |
+| Cycle train LED / turn it off | `ledchangecolor` / `led/0` |
+
+BLE writes use service UUID `00001623-1212-efde-1623-785feabcd123` and
+characteristic UUID `00001624-1212-efde-1623-785feabcd123`. The scripts in
+`train-pusher-ble.yaml` construct these eight-byte payloads:
+
+| Script | Payload |
+| --- | --- |
+| `motor_command` | `[0x08, 0x00, 0x81, 0x00, 0x01, 0x51, 0x00, speed]` |
+| `sound_command` | `[0x08, 0x00, 0x81, 0x01, 0x11, 0x51, 0x01, sound_id]` |
+| `led_command` | `[0x08, 0x00, 0x81, 0x11, 0x11, 0x51, 0x00, color]` |
+
+Each final parameter is cast to `uint8_t`; negative motor speeds become their
+unsigned byte representation. Motor 0 stops and 127 brakes. The configured
+sound IDs are 5 and 7; LED colors cycle 1–10, with 0 for off. Treat this as a
+reference to the current implementation, not a complete train protocol spec.
+
+## Deployment checks and troubleshooting
+
+For an authorized deployment, confirm HTTP backend reachability using the
+configured address and port. Check static-IP conflicts wherever `manual_ip` is
+enabled. Discover the train's BLE address with nRF Connect (look for
+`LPF2 Smart Hub`) or existing ESP32 scan logs before setting the substitution.
+
+- Inspect device logs with `uv run esphome logs <config>` when hardware access
+  is requested. Device names are `train-pusher-client` and `train-pusher-ble`.
+- Wi-Fi failures: check local credentials and network settings. Fallback hotspot
+  SSIDs are `Train-Pusher-Client` (HTTP) and `Train-Pusher-BLE` (BLE).
+- HTTP failures: check backend availability, its logs, and firewall access to the
+  configured port; do not assume the device's button LED proves a request worked.
+- Button failures: verify GPIO wiring, active-low behavior and external pullups.
+- LED failures: verify TLC5947 power, data/clock/latch wiring and output channels.
 
 ## Scope and verification
 
